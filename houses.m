@@ -122,3 +122,17 @@ ylabel('Predicted price ($1000s)')
 xlim([0 50]); ylim([0 50]);
 fprintf('RMSE: %f\n\n',sqrt(mean((ytrue-ypred).^2)))
 
+%% Variable Importance 
+% One very nice feature of bagged trees method, like Random Forest, is 
+% that you can get variable importance metrics if you enable 'oobvarimp' 
+% option.
+%
+% It says the most important variable is the number of rooms, then the
+% Percent lower status of the population (whatever that means), etc.
+
+varimp = btrees.OOBPermutedVarDeltaError';
+vars = T.Properties.VariableNames;
+vars(14) =[];
+[~,idx]= sort(varimp,'descend');
+V = table(varimp(idx),'RowNames',vars(idx),'VariableNames',{'Importance'});
+disp(V)
