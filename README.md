@@ -74,8 +74,121 @@ Number of missing data in the dataset: 0
 
 
 
+### Classify a new sample with k nearest neighbor (KNN) method ###
 
 
+We will fit a model using the default parameters and see what class it predicts for a new sample. Prediction Score indicates how confident the prediction is.
+
+<pre>
+% Add a new sample
+new = [3,5,4,2];
+
+% Fit a KNN classifier
+cl = ClassificationKNN.fit(T{:,1:4},cellstr(T.class),...
+    'PredictorNames',T.Properties.VariableNames(1:4),...
+    'ResponseName',T.Properties.VariableNames{5}...
+    );
+disp(cl)
+</pre>
+
+Inspect the model properties
+
+<pre>
+  ClassificationKNN
+    PredictorNames: {'SL'  'SW'  'PL'  'PW'}
+      ResponseName: 'class'
+        ClassNames: {'setosa'  'versicolor'  'virginica'}
+    ScoreTransform: 'none'
+     NObservations: 150
+          Distance: 'euclidean'
+      NumNeighbors: 1
+</pre>
+
+Make a prediction for the new sample
+
+<pre>
+[pred, score] = predict(cl,new);
+fprintf('Predicted class of the new sample: "%s"\n', char(pred));
+fprintf('Prediction Score: %.2f%%\n\n', score(strcmp(char(pred),...
+    cellstr(unique(T.class))))*100);
+</pre>
+
+
+Predicted class of the new sample: "virginica"<br>
+Prediction Score: 100.00%
+
+### Quality of KNN Classifier ###
+
+The quality of KNN classifier depends on the choice of parameter k, which specifies the number of nearest neighbors to use in computation. Smaller k is sensitive to noise in the data.
+
+The default is k = 1, which means it assigns the class of the single nearest neighbor. Since we used the whole dataset to fit the classifier, it is going to predict the class of the existing data perfectly, but this is not very useful in practice.
+
+<pre>
+rloss = resubLoss(cl);
+fprintf('Resubstitution loss at k=1: %.2f%%\n\n', rloss*100);
+</pre>
+
+Resubstitution loss at k=1: 0.00%
+
+### Simulate the realistic performnace with cross validation ###
+
+Cross validation enables evaluation of the classifer by withholding a portion of the data during the training, and test the classifier against the withheld data. The average error rate will give us more realisitc idea about the performnace of the classifier.
+
+<pre>
+cv = crossval(cl);
+kloss = kfoldLoss(cv);
+fprintf('Avg cross validation loss at k=1: %.2f%%\n\n', kloss*100);
+</pre>
+
+Avg cross validation loss at k=1: 4.00%
+
+### Confusion Matrix ###
+
+Confusion Matrix allows comparison of prediction against the ground truth and serves as the basis to compute the rates of true positives, false positiives, true negatives, and false negatives. Ground truth is mapped to the rows and prediction is mapped to the columns. The diagonal represents the true positivies.
+
+This analysis shows that all misclassifications are between versicolor and virginica.
+
+<pre>
+labels = cellstr(unique(T.class));
+fprintf('Confusion Matrix for k = %d\n', 2);
+cl.NumNeighbors = 2;
+pred = resubPredict(cl);
+C = confusionmat(cellstr(T.class),pred);
+C1 = table(C(:,1),C(:,2),C(:,3),'VariableNames',labels,'RowNames',labels);
+disp(C1)
+</pre>
+
+Confusion Matrix for k = 2
+
+<pre>
+                  setosa    versicolor    virginica
+                  ______    __________    _________
+
+    setosa        50         0             0       
+    versicolor     0        50             0       
+    virginica      0         3            47       
+</pre>
+
+Changing k to 3
+
+<Pre>
+fprintf('Confusion Matrix for k = %d\n', 3);
+cl.NumNeighbors = 3;
+pred = resubPredict(cl);
+C = confusionmat(cellstr(T.class),pred);
+C2 = table(C(:,1),C(:,2),C(:,3),'VariableNames',labels,'RowNames',labels);
+disp(C2)
+</pre>
+
+Confusion Matrix for k = 3
+<pre>
+                  setosa    versicolor    virginica
+                  ______    __________    _________
+
+    setosa        50         0             0       
+    versicolor     0        47             3       
+    virginica      0         3            47       
+</pre>
 
 
 
