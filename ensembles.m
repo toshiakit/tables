@@ -1,6 +1,8 @@
 %% Ensemble Methods
 % Experiment with new Table and Category data types in MATLAB R2013b
-% release using various datasets.
+% release using various datasets. This is based on this example:
+%
+% <http://www.mathworks.com/help/stats/ensemble-methods.html>
 %
 %% Fisher Iris Dataset
 % Features in the dataset are the measurements of iris flowers. The goal
