@@ -345,7 +345,7 @@ clearvars ans fid s VarNames
 rng(0,'twister') % for reproducibility
 t = ClassificationTree.template('surrogate','all');
 
-%% Classification without Cost Adjustment
+%% Classification Without Cost Adjustment
 % For binary classification with multi-level predictors, we use
 % GentleBoost with 150 trees, and we specify the categorical predictors in
 % the dataset.
@@ -370,7 +370,7 @@ CM = table(c(:,1),c(:,2),'VariableNames',ClassNames,'RowNames',ClassNames);
 fprintf('Comfusion Matrix\n');
 disp(CM)
 
-%% Classification without Cost Adjustment
+%% Classification With Cost Adjustment
 % This time, the classifier is modified to account for the cost of
 % misdiagnosis. If we believe that predicting the patient lives, but the 
 % patient dies (false negative) is worse than predicting the patient dies,
