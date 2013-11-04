@@ -32,7 +32,7 @@ vars = {'CRIM','RES','IND','CHAR','NOX','RM','AGE','DIST','RAD','TAX',...
 T = table(x(:,1),x(:,2),x(:,3),x(:,4),x(:,5),x(:,6),x(:,7),x(:,8),...
     x(:,9),x(:,10),x(:,11),x(:,12),x(:,13),t,'VariableNames',vars);
 
-% Preview the first 5 rows of data
+% preview the first 5 rows of data
 fprintf('Preview the first 5 rows of Housing Value dataset\n\n')
 disp(T(1:5,:)) 
 
@@ -53,20 +53,25 @@ clearvars t x vars
 %% Histogram the pricing data
 % check the values in the data
 
+figure(1)
 hist(T.Target)
 xlabel('price($1000s)')
 ylabel('count')
 
 %% Split the dataset into training and test subsets
-% 
+% Create an independent test set for checking the regression performance.
 
 % Make sure we can reproduce the randomization result
 stream.State = savedState;
 % Split dataset into 60:40 ratio
-[train,test] = crossvalind('holdout',height(T),0.4);
+part = cvpartition(height(T),'holdout',0.4);
+istrain = training(part); % data for fitting
+istest = test(part); % data for quality assessment
 
-fprintf('Size of training set: %d\n',sum(train))
-fprintf('Size of training set: %d\n\n',sum(test))
+fprintf('Size of training set: %d\n',sum(istrain))
+fprintf('Size of training set: %d\n\n',sum(istest))
+
+clearvars part
 
 %% Run a simple linear regression
 % There are number of possible algorithms to choose from. We can start
@@ -81,28 +86,9 @@ fprintf('Size of training set: %d\n\n',sum(test))
 % Note: this is a very naive use of linear regression, since we didn't
 % even normalize the features among many other things.
 
-lm = fitlm(T{train,1:end-1},T.Target(train));
-ypred = predict(lm,T{test,1:end-1});
-ytrue = T.Target(test);
-figure(1)
-plot(ytrue,ypred,'.')
-hold on
-plot([0,50],[0,50], '-k')
-hold off
-xlabel('True price ($1000s)')
-ylabel('Predicted price ($1000s)')
-xlim([0 50]); ylim([0 50]);
-fprintf('RMSE: %f\n\n',sqrt(mean((ytrue-ypred).^2)))
-
-%% Run a bagged trees regression
-% Try bagged decision trees method to see if it does better. As you can
-% see, this more complex model captures the complexity of the dataset
-% better - the dots are now more tightly clustered - but it still have
-% problems in the high price range. 
-
-btrees = TreeBagger(50,T{train,1:end-1},T.Target(train),...
-    'Method','regression','oobvarimp','on');
-ypred = predict(btrees,T{test,1:end-1});
+lm = fitlm(T{istrain,1:end-1},T.Target(istrain));
+ypred = predict(lm,T{istest,1:end-1});
+ytrue = T.Target(istest);
 figure(2)
 plot(ytrue,ypred,'.')
 hold on
@@ -113,16 +99,26 @@ ylabel('Predicted price ($1000s)')
 xlim([0 50]); ylim([0 50]);
 fprintf('RMSE: %f\n\n',sqrt(mean((ytrue-ypred).^2)))
 
-%% Variable Importance 
-% One very nice feature of bagged trees method is that you can get variable
-% importance metrics if you enable 'oobvarimp' option.
-%
-% So it says the most important variable is the number of rooms, then the
-% Percent lower status of the population (whatever that means), etc.
+%% Run a bagged trees regression (Random Forest)
+% Try bagged decision trees method to see if it does better. The parameter
+% 'NVarToSample' determines the number of randomly selected features for
+% each decision split, for regression, the default is 1/3 of number of
+% features. This setting invokes Breiman's 'random forest' algorithm.
+% 
+% This more complex model captures the complexity of the dataset
+% better - the dots are now more tightly clustered - but it still have
+% problems in the high price range. 
 
-varimp = btrees.OOBPermutedVarDeltaError';
-vars = T.Properties.VariableNames;
-vars(14) =[];
-[~,idx]= sort(varimp,'descend');
-V = table(varimp(idx),'RowNames',vars(idx),'VariableNames',{'Importance'});
-disp(V)
+btrees = TreeBagger(50,T{istrain,1:end-1},T.Target(istrain),...
+    'Method','regression','oobvarimp','on');
+ypred = predict(btrees,T{istest,1:end-1});
+figure(3)
+plot(ytrue,ypred,'.')
+hold on
+plot([0,50],[0,50], '-k')
+hold off
+xlabel('True price ($1000s)')
+ylabel('Predicted price ($1000s)')
+xlim([0 50]); ylim([0 50]);
+fprintf('RMSE: %f\n\n',sqrt(mean((ytrue-ypred).^2)))
+
